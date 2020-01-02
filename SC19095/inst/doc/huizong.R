@@ -1,0 +1,530 @@
+## ------------------------------------------------------------------------
+#figure
+n <- seq(20, 90, 5) 
+x <- rnorm(sum(n)) 
+y <- factor(rep(n, n), labels=paste("n =", n)) 
+hist(x)
+#table
+data(women)
+table(women)
+
+## ------------------------------------------------------------------------
+rm(list=ls())
+#3.4
+n <- 1000
+for (i in 1:5){
+  sigma <- 10^(i-1)
+  u <- runif (n)
+  x <- (-2*sigma^2*log(1-u))^(1/2)
+  h <- (-2*sigma^2*log(1/2))^(1/2)
+  h <- h/sigma^2*exp(-h^2/(2*sigma^2))
+  hist(x,prob = TRUE, main = expression(f(x) == frac(x,sigma^2)*e^-frac(x^2,2*sigma^2)), sub = paste("sigma","=",sigma), ylim = c(0, 1.5*h))
+  y <- seq(0,10*sigma, .01)
+  lines(y, y/sigma^2*exp(-y^2/(2*sigma^2)))
+}
+#3.11
+n <- 1000
+X1 <- rnorm(n, 0, 1)
+X2 <- rnorm(n, 3, 1)
+k <- 0.75
+Z1 <- k*X1 + (1-k)*X2
+hist(Z1,prob = TRUE)
+for (i in 1:4){
+  k <- 0.2*i
+  Z1 <- k*X1 + (1-k)*X2
+  hist(Z1, prob = TRUE ,sub = paste("k","=",k))
+}
+#3.18
+n = 3
+Sigma <- matrix(c(1, .5, .5, 1), nrow = 2, ncol = 2)
+ Wishart<- function(n, Sigma){
+    d = sqrt(length(Sigma))
+    T <- matrix(rep(0,d^2), nrow = d, ncol = d)
+    for (i in 1:d) {
+      for (j in 1:d) {
+        if (i>j){T[i,j] = rnorm(1)} 
+        if (i==j){T[i,j] = rchisq(1, n-i+1)}
+      }
+    }
+    A <- T %*% t(T)
+    L <- t(chol(Sigma))
+    X <- L %*% T %*% t(L)
+    X
+  }
+Wishart(n, Sigma)
+
+## ------------------------------------------------------------------------
+rm(list=ls())
+#5.1
+for (i in 1:10) {
+  i=i+1
+  m <- 1e4; x <-runif(m,min=0,max=pi/3)
+  theta.hat <- mean(sin(x))*(pi/3)
+  print(cbind(theta.hat,cos(0) - cos(pi/3)))
+  
+}
+#5.10
+m<- 1000
+MC1 <- MC2 <- numeric(m)
+for (i in 1:m) {
+  i=i+1
+  x <-runif(m)
+  a <- mean(exp(-x) / (1+x*x))
+  y <- 1-x
+  b <- mean(((exp(-x) / (1+x*x))+(exp(-y) / (1+y*y)))/2)
+  MC1[i] <- a
+  MC2[i] <- b 
+}
+print(sd(MC1))
+print(sd(MC2))
+print((var(MC1)-var(MC2))/var(MC1))
+
+## ------------------------------------------------------------------------
+rm(list=ls())
+#6.5
+m<-1e4
+set.seed(123)
+n<-0
+a<-numeric(m)
+for (i in 1:m) {
+  x<-rchisq(20,2)
+  y<-rnorm(1)
+  a[i]<-y/sqrt(mean(x))
+  b<-qt(0.025,20)
+   if(abs(a[i])<=abs(b))
+    {n<-n+1}
+  }
+print((n/m))
+#6.6
+n<-1e3
+m<-1e4
+set.seed(1234)
+ske<-numeric(m)
+for (i in 1:m) {
+  x<-rnorm(n)
+  ske[i]<-(mean((x-mean(x))^3))/(mean((x-mean(x))^2))^(3/2)
+}
+est<-quantile(ske,prob=c(0.025,0.05,0.95,0.975))
+j=1
+cv<-Var<-numeric(4)
+for (p in c(0.025,0.05,0.95,0.975)) {
+  cv[j] <- qnorm(p, 0, sqrt(6/n))
+  Var[j]<-(p*(1-p))/n*(dnorm(est[j],0,sqrt(6/n))^2)
+  j=j+1
+}
+res.compare<-data.frame(est,cv,Var)
+knitr::kable(res.compare)
+
+## ------------------------------------------------------------------------
+rm(list=ls())
+#6.7
+n <- 100
+m <-10000
+a <- seq(0, 10, 0.5) 
+N <- length(a)
+set.seed(100)
+
+sk <- function(x) {
+#computes the sample skewness coeff. 
+xbar <- mean(x)
+m3 <- mean((x - xbar)^3)
+m2 <- mean((x - xbar)^2)
+return( m3 / m2^1.5 )
+}
+cv <- qnorm(.95, 0, sqrt(6*(n-2) / ((n+1)*(n+3))))#we assume alpha=0.1
+p.reject <- numeric(N) 
+for (i in 1:length(n)) {
+  ai <- a[i]
+  sktests <- numeric(m)
+for (j in 1:m) {
+x <- rbeta(n,ai,ai)
+sktests[j] <- as.integer(abs(sk(x)) >= cv[i] ) }
+p.reject[i] <- mean(sktests)  }
+print(p.reject)
+#6.A
+n <- 200
+alpha <- 0.1
+mu0 <- 1 
+m <- 10000
+p <- numeric(m) 
+set.seed(100)
+for (i in 1:m) {
+  x <- rchisq(n, mu0)
+  ttest <- t.test(x, alternative = "greater", mu = mu0)
+  p[i] <- ttest$p.value
+}
+p.hat <- mean(p<alpha)
+se.hat <- sqrt(p.hat*(1-p.hat)/m)
+print(c(p.hat, se.hat))
+
+## ------------------------------------------------------------------------
+rm(list=ls())
+#7.8
+data(scor, package = "bootstrap")# install packages('bootstrap')
+n<-nrow(scor)
+f<-function(x){
+  mat<-cov(x)
+  evals<-eigen(mat)$values
+  return(evals[1]/sum(evals))
+}
+theta.hat<-f(scor)
+#compute the normal estimate
+theta.jack<-numeric(n)
+for (i in 1:n) {
+  theta.jack[i]=f(scor[-i,])
+}
+bias<-(n-1)*(mean(theta.jack)-theta.hat)
+#compute the jackknife replicates,leave-one-out estamites
+print(bias)
+# jackknife estimate of bias
+se <- sqrt((n-1)*mean((theta.jack - mean(theta.jack))^2))
+print(se)
+#7.10
+library(DAAG)#install packages('DAAG')
+attach(ironslag)
+n <- length(magnetic) 
+e1 <- e2 <- e3 <- e4 <- numeric(n)
+for (k in 1:n) {
+  y <- magnetic[-k]
+  x <- chemical[-k]
+  
+  J1 <- lm(y ~ x)
+  yhat1 <- J1$coef[1] + J1$coef[2] * chemical[k]
+  e1[k] <- magnetic[k] - yhat1
+  
+  J2 <- lm(y ~ x + I(x^2))
+  yhat2 <- J2$coef[1] + J2$coef[2] * chemical[k] +J2$coef[3] * chemical[k]^2
+  e2[k] <- magnetic[k] - yhat2
+  
+  J3 <- lm(log(y) ~ x)
+  logyhat3 <- J3$coef[1] + J3$coef[2] * chemical[k]
+  yhat3 <- exp(logyhat3)
+  e3[k] <- magnetic[k] - yhat3
+  
+  J4 <- lm(y ~ x + I(x^2)+I(x^3))
+  yhat4 <- J4$coef[1] + J4$coef[2] * chemical[k]+J4$coef[3]*chemical[k]^2+J4$coef[4]*chemical[k]^3
+  e4[k] <- magnetic[k] - yhat4
+}
+c(mean(e1^2), mean(e2^2), mean(e3^2), mean(e4^2))
+summary(J1)
+summary(J2)
+summary(J3)
+summary(J4)
+
+## ------------------------------------------------------------------------
+rm(list=ls())
+library(GeneralizedHyperbolic)
+lw.Metropolis<-function(sigma,N){
+  x<-numeric(N)
+  x[1]<-rnorm(1,0,sigma)
+  u<-runif(N)
+  k<-0
+  for (i in 2:N) {
+    y<-rnorm(1,x[i-1],sigma)
+    if(u[i]<=dskewlap(y)/dskewlap(x[i-1]))
+      x[i]=y
+    else{
+      x[i]=x[i-1]
+      k=k+1
+    }
+  }
+  return(list(x=x,k=k))
+}
+N<-2000
+sigma<-c(0.25,1,4,16)
+set.seed(1234)
+lw1<-lw.Metropolis(sigma[1],N)
+lw2<-lw.Metropolis(sigma[2],N)
+lw3<-lw.Metropolis(sigma[3],N)
+lw4<-lw.Metropolis(sigma[4],N)
+print(c(1-lw1$k/N,1-lw2$k/N,1-lw3$k/N,1-lw4$k/N))
+
+## ------------------------------------------------------------------------
+rm(list=ls())
+N<-10
+a<-b<-numeric(N)
+for (i in 1:N) {
+  a[i]<-identical(log(exp(i)),exp(log(i)))
+  b[i]<-all.equal(log(exp(i)),exp(log(i)))
+}
+com<-rbind(a,b)
+print(com)
+
+## ------------------------------------------------------------------------
+rm(list=ls())
+formulas <- list(mpg ~ disp,
+                 mpg ~ I(1 / disp),
+                 mpg ~ disp + wt,
+                 mpg ~ I(1 / disp) + wt)
+out1<-vector("list",length(formulas))
+for (i in 1:length(formulas)) {
+  out1[[i]]<-lm(formulas[[i]],data=mtcars)
+}
+out2<-lapply(formulas,lm,data=mtcars)
+out1
+bootstraps<-lapply(1:10, function(i) {
+  rows <- sample(1:nrow(mtcars), rep = TRUE)
+  mtcars[rows, ]
+  }
+)
+out3<-vector("list",10)
+for (i in 1:10) {
+  out3[[i]]<-lm(mpg~disp,data=bootstraps[[i]])
+}
+out4<-lapply(bootstraps,lm,formula=mpg~disp)
+out3
+rsq <- function(mod) summary(mod)$r.squared
+lapply(out1,rsq)
+lapply(out3,rsq)
+trials<-replicate(100, t.test(rpois(10, 10), rpois(7, 10)), simplify = FALSE)
+p1<-sapply(trials, function(x) x$p.value)
+p2<-sapply(trials, '[[',3)
+p1
+p2
+unlist(lapply(1:10, sqrt))
+library(parallel)
+unlist(mclapply(1:10, sqrt, mc.cores = 4))
+
+## ------------------------------------------------------------------------
+rm(list=ls())
+set.seed(12345)
+library(boot)
+library(bootstrap)
+
+scor = data.matrix(scor)
+pairs(scor, main='the scatter plots for each pair of test scores', pch = 18)
+cor_scor = round(cor(scor),4)
+cor_scor
+b.cor = function(x,i){  
+  r = cor(x[i,])
+  c(r[1,2], r[3,4], r[3,5], r[4,5])
+}
+sc.boot = boot(data = scor, statistic = b.cor, R=2000)
+apply(sc.boot$t, 2, FUN = sd)
+set.seed(12345)
+library(boot)
+
+# normal
+
+skew = 0
+sk = function(x,i) {
+  xbar = mean(x[i])
+  m3 = mean((x[i] - xbar)^3)
+  m2 = mean((x[i] - xbar)^2)
+  return( m3 / m2^1.5 )
+}
+n=10
+m=1000
+ci.norm = ci.basic = ci.perc = matrix(0,m,2)
+
+for(i in 1:m){
+ x = rnorm(n)
+ b = boot(data = x, statistic = sk, R = 2000)
+ ci = boot.ci(b, type=c("norm","basic","perc"))
+ ci.norm[i,] = ci$norm[2:3]
+ ci.basic[i,] = ci$basic[4:5]
+ ci.perc[i,] = ci$percent[4:5]
+}
+
+# output
+output1 = output2 = output3 = matrix(0,2,3)
+rownames(output1)=rownames(output2)=rownames(output3)=c("N(0,1)","X^2(5)")
+colnames(output1)=colnames(output2)=colnames(output3)=c("norm","basic","perc")
+
+output1[1,] = c(mean(ci.norm[,1]<=skew & ci.norm[,2]>=skew), mean(ci.basic[,1]<=skew & ci.basic[,2]>=skew), mean(ci.perc[,1]<=skew & ci.perc[,2]>=skew))
+output2[1,] = c(mean(ci.norm[,1]>skew), mean(ci.basic[,1]>skew), mean(ci.perc[,1]>skew)) 
+output3[1,] = c(mean(ci.norm[,2]<skew), mean(ci.basic[,2]<skew), mean(ci.perc[,2]<skew)) 
+
+# chi-square
+
+skew = sqrt(8/5)
+ci.norm = ci.basic = ci.perc = matrix(0,m,2)
+
+for(i in 1:m){
+ x = rchisq(n,5)
+ b = boot(data = x, statistic = sk, R = 2000)
+ ci = boot.ci(b, type=c("norm","basic","perc"))
+ ci.norm[i,] = ci$norm[2:3]
+ ci.basic[i,] = ci$basic[4:5]
+ ci.perc[i,] = ci$percent[4:5]
+}
+
+# output
+
+output1[2,] = c(mean(ci.norm[,1]<=skew & ci.norm[,2]>=skew), mean(ci.basic[,1]<=skew & ci.basic[,2]>=skew), mean(ci.perc[,1]<=skew & ci.perc[,2]>=skew))
+output2[2,] = c(mean(ci.norm[,1]>skew), mean(ci.basic[,1]>skew), mean(ci.perc[,1]>skew)) 
+output3[2,] = c(mean(ci.norm[,2]<skew), mean(ci.basic[,2]<skew), mean(ci.perc[,2]<skew)) 
+
+output1
+output2
+output3
+
+## ------------------------------------------------------------------------
+set.seed(12345)
+
+# Count Five test
+count5test = function(x, y) {
+X = x - mean(x)
+Y = y - mean(y)
+outx = sum(X > max(Y)) + sum(X < min(Y))
+outy = sum(Y > max(X)) + sum(Y < min(X))
+# return 1 (reject) or 0 (do not reject H0)
+return(as.integer(max(c(outx, outy)) > 5))
+}
+# Count Five test permutation
+count5test_permutation = function(z) {
+
+n = length(z)
+x = z[1:(n/2)]
+y = z[-(1:(n/2))]
+X = x - mean(x)
+Y = y - mean(y)
+outx = sum(X > max(Y)) + sum(X < min(Y)) 
+outy = sum(Y > max(X)) + sum(Y < min(X))
+# return 1 (reject) or 0 (do not reject H0) 
+return(as.integer(max(c(outx, outy)) > 5))
+}
+permutation = function(z,R) {
+  n = length(z)
+  out = numeric(R)
+  for (r in 1: R){
+      p = sample(1:n ,n ,replace = FALSE)
+      out[r] = count5test_permutation(z[p])
+  }
+  sum(out)/R
+}              
+
+
+n1 = 20
+n2 = 50
+mu1 = mu2 = 0
+sigma1 = sigma2 = 1
+m = 1e3
+
+alphahat1 = mean(replicate(m, expr={
+x = rnorm(n1, mu1, sigma1)
+y = rnorm(n2, mu2, sigma2)
+x = x - mean(x) #centered by sample mean
+y = y - mean(y)
+count5test(x, y)
+}))
+alphahat2 = mean(replicate(m, expr={
+x = rnorm(n1, mu1, sigma1)
+y = rnorm(n2, mu2, sigma2)
+x = x - mean(x) #centered by sample mean 
+y = y - mean(y)
+z = c(x,y)
+permutation(z,1000) 
+})<0.05)
+round(c(count5test=alphahat1,count5test_permutation=alphahat2),4)
+
+## ------------------------------------------------------------------------
+Rayleigh.1 <- function(x, sigma) {
+  m=1000
+  u <- runif(m/2)
+  v <- runif(m/2)
+  u <- c(u, v)
+  cdf <- numeric(length(x))
+  for (i in 1:length(x)) {
+    g <- x[i]^2/sigma^2 * u * exp(-x[i]^2/(2 * sigma^2) * u^2)
+    cdf[i] <- mean(g)
+  }
+  return(cdf)
+}
+x <- seq(.1, 9.5, length=50)
+sigma <- 2
+set.seed(123)
+plot(Rayleigh.1(x, sigma))
+
+
+## ------------------------------------------------------------------------
+cauchy.2 <- function(n,theta=1,eta=0){
+  x <- numeric(n)
+  u <- runif(n)
+  x[1] <- rnorm(1)
+  k <- 0
+  # cauchy functions
+  f <- function(x, theta=1, eta=0){
+    out <- 1/(pi * theta * (1+((x-eta)/theta)^2))
+    return(out)
+  }
+
+  for(i in 2:n){
+    xt <- x[i-1]
+    y <- rnorm(1,mean=xt)
+    R <- f(y)*dnorm(xt,mean=y)/(f(xt)*dnorm(y,mean=xt))
+    if(u[i] <= R){
+      x[i] <- y
+    }else{
+      x[i] <- xt
+      k <- k+1
+    }
+  }
+  return(x)
+}
+cauchy.2(100)
+
+## ------------------------------------------------------------------------
+library(Rcpp)
+library(microbenchmark)
+rwM<-function(x0,sigma,N){ # R function
+  x<-numeric(N)
+  x[1]<-x0
+  u<-runif(N)
+  k<-0
+  for(i in 2:N){
+    y<-rnorm(1,mean=x[i-1],sd=sigma)
+    if(u[i]<=exp(-abs(y))/exp(-abs(x[i-1]))) {
+      x[i]<-y
+      k<-k+1}
+    else x[i]<-x[i-1]
+  }
+  return(list(x=x,k=k))
+}
+
+#Rcpp function
+cppFunction('List rwMc(double x0, double sigma, int N){
+NumericVector x(N);
+x[0]=x0;
+int k=0;
+for(int i=1;i<N;i++){
+
+double y=as<double>(rnorm(1,x[i-1], sigma));
+double u=as<double>(runif(1));
+
+if (u<=exp(-abs(y))/exp(-abs(x[i-1]))) {
+x[i]=y;
+k=k+1;  
+}
+else x[i]=x[i-1];
+}
+
+return(List::create(Named("x")=x,Named("k")=k));
+}')
+
+sigma<-c(0.05,0.5,2,16)
+x0<-25
+N<-2000
+set.seed(100)
+
+rw1<-rwM(x0,sigma[1],N) #R samples
+rw2<-rwM(x0,sigma[2],N)
+rw3<-rwM(x0,sigma[3],N)
+rw4<-rwM(x0,sigma[4],N)
+
+rwc1<-rwMc(x0,sigma[1],N) #Rcpp samples
+rwc2<-rwMc(x0,sigma[2],N)
+rwc3<-rwMc(x0,sigma[3],N)
+rwc4<-rwMc(x0,sigma[4],N)
+par(mfrow=c(2,2))
+
+
+ts1<-microbenchmark(rwM(x0,sigma[1],N),rwMc(x0,sigma[1],N)) 
+ts2<-microbenchmark(rwM(x0,sigma[2],N),rwMc(x0,sigma[2],N))
+ts3<-microbenchmark(rwM(x0,sigma[3],N),rwMc(x0,sigma[3],N))
+ts4<-microbenchmark(rwM(x0,sigma[4],N),rwMc(x0,sigma[4],N))
+summary(ts1)[,c(1,3,5,6)]
+summary(ts2)[,c(1,3,5,6)]
+summary(ts3)[,c(1,3,5,6)]
+summary(ts4)[,c(1,3,5,6)]
+
